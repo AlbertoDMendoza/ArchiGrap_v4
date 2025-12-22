@@ -1,0 +1,47 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  color: #646cff;
+  margin-bottom: 0.5rem;
+}
+
+.status-card {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+td:first-child {
+  width: 200px;
+}
+
+.next-steps {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.next-steps ol {
+  text-align: left;
+}
+
+.next-steps li {
+  margin: 0.5rem 0;
+}
