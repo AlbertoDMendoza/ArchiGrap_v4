@@ -1,0 +1,3 @@
+[submodule "ontology/archimate_ontology"]
+	path = ontology/archimate_ontology
+	url = https://github.com/AlbertoDMendoza/archimate_ontology.git
