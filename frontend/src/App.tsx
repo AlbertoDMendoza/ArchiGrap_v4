@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getHealth, type HealthResponse } from './lib/api'
+import GraphExplorer from './components/GraphExplorer'
+import { EntityManager } from './shacl/EntityManager'
 import './App.css'
 
 function App() {
@@ -78,15 +80,16 @@ function App() {
         </table>
       </div>
 
-      <div className="next-steps">
-        <h2>📋 Next Steps</h2>
-        <ol>
-          <li>✅ Backend connected</li>
-          <li>✅ GraphDB connected</li>
-          <li>⏳ Load ontology (see backend/ontology/)</li>
-          <li>⏳ Build SHACL form generator</li>
-          <li>⏳ Add Claude integration</li>
-        </ol>
+      <div className="entity-manager-section">
+        <h2>📝 Entity Manager</h2>
+        <EntityManager />
+      </div>
+
+      <div className="graph-explorer">
+        <h2>🔍 Graph Explorer</h2>
+        <GraphExplorer
+          sparqlEndpoint={`${import.meta.env.VITE_API_URL}/api/sparql-proxy`}
+        />
       </div>
     </div>
   )

@@ -1,0 +1,130 @@
+.shacl-form {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 500px;
+}
+
+.shacl-form h3 {
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #646cff;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-form-field {
+  margin-bottom: 1rem;
+}
+
+.shacl-form-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-form-field .required {
+  color: #dc3545;
+  margin-left: 0.25rem;
+}
+
+.shacl-form-field .field-description {
+  display: block;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.shacl-form-field input,
+.shacl-form-field select,
+.shacl-form-field textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  background: #242424;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-form-field input:focus,
+.shacl-form-field select:focus,
+.shacl-form-field textarea:focus {
+  outline: none;
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.25);
+}
+
+.shacl-form-field input::placeholder,
+.shacl-form-field textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.shacl-form-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.shacl-form-field select option {
+  background: #242424;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.shacl-form-actions button {
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.shacl-form-actions button[type="submit"] {
+  background: #646cff;
+  color: white;
+}
+
+.shacl-form-actions button[type="submit"]:hover {
+  background: #535bf2;
+}
+
+.shacl-form-actions button[type="submit"]:disabled {
+  background: #444;
+  cursor: not-allowed;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.shacl-form-actions button[type="button"] {
+  background: #333;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-form-actions button[type="button"]:hover {
+  background: #444;
+}
+
+.shacl-form-loading,
+.shacl-form-error {
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.shacl-form-loading {
+  background: #1a1a1a;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.shacl-form-error {
+  background: #3d1a1f;
+  color: #f5a3aa;
+  border: 1px solid #dc3545;
+}

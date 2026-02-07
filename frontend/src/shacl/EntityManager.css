@@ -1,0 +1,144 @@
+.entity-manager {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.5rem;
+  min-height: 400px;
+}
+
+.entity-types {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.entity-types h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.entity-types ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.entity-types li {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.entity-types li:hover {
+  background: #2a2a2a;
+}
+
+.entity-types li.selected {
+  background: #646cff;
+  color: white;
+}
+
+.entity-types .no-types {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
+
+.entity-content {
+  min-width: 0;
+}
+
+.entity-content .select-prompt {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 2rem;
+}
+
+.entity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.entity-header h3 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.entity-header button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.entity-header button:hover {
+  background: #218838;
+}
+
+.message {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: #1a3d1f;
+  border: 1px solid #28a745;
+  border-radius: 4px;
+  color: #7ddf93;
+}
+
+.no-entities {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 2rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.entity-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.entity-table th,
+.entity-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.entity-table th {
+  background: #1a1a1a;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.entity-table td {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.entity-table .uri {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.entity-table .delete-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.entity-table .delete-btn:hover {
+  background: #c82333;
+}

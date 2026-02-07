@@ -72,6 +72,83 @@ app.post('/api/sparql', async (req, res) => {
   }
 })
 
+// SPARQL proxy for Reactodia (handles raw SPARQL queries)
+app.post('/api/sparql-proxy', express.text({ type: '*/*' }), async (req, res) => {
+  try {
+    const query = req.body
+    const accept = req.headers.accept || 'application/sparql-results+json'
+
+    const response = await axios.post(
+      `${GRAPHDB_URL}/repositories/${GRAPHDB_REPO}`,
+      query,
+      {
+        headers: {
+          'Content-Type': 'application/sparql-query',
+          'Accept': accept
+        },
+        responseType: accept.includes('json') ? 'json' : 'text'
+      }
+    )
+
+    res.set('Content-Type', accept)
+    res.send(response.data)
+  } catch (error) {
+    console.error('SPARQL proxy error:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// GET handler for SPARQL proxy (some clients use GET with query param)
+app.get('/api/sparql-proxy', async (req, res) => {
+  try {
+    const query = req.query.query
+    if (!query) {
+      return res.status(400).json({ error: 'Missing query parameter' })
+    }
+
+    const accept = req.headers.accept || 'application/sparql-results+json'
+
+    const response = await axios.get(
+      `${GRAPHDB_URL}/repositories/${GRAPHDB_REPO}`,
+      {
+        params: { query },
+        headers: {
+          'Accept': accept
+        },
+        responseType: accept.includes('json') ? 'json' : 'text'
+      }
+    )
+
+    res.set('Content-Type', accept)
+    res.send(response.data)
+  } catch (error) {
+    console.error('SPARQL proxy error:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// SPARQL UPDATE endpoint (INSERT/DELETE)
+app.post('/api/sparql-update', express.text({ type: '*/*' }), async (req, res) => {
+  try {
+    const update = req.body
+
+    await axios.post(
+      `${GRAPHDB_URL}/repositories/${GRAPHDB_REPO}/statements`,
+      update,
+      {
+        headers: {
+          'Content-Type': 'application/sparql-update'
+        }
+      }
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('SPARQL update error:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Simple instance list endpoint (for testing)
 app.get('/api/instances', async (req, res) => {
   try {

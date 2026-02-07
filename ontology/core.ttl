@@ -1,0 +1,119 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ag: <http://archigraph.org/ontology#> .
+
+# =============================================================================
+# ArchiGraph v4 Core Ontology
+# A minimal 5-concept Enterprise Architecture ontology
+# =============================================================================
+
+ag: a owl:Ontology ;
+    rdfs:label "ArchiGraph v4 Core Ontology" ;
+    rdfs:comment "Semantic-native Enterprise Architecture ontology with 5 core concepts" ;
+    owl:versionInfo "1.0.0" .
+
+# =============================================================================
+# Core Classes
+# =============================================================================
+
+ag:System a owl:Class ;
+    rdfs:label "System" ;
+    rdfs:comment "An IT system or application that supports business processes" .
+
+ag:Capability a owl:Class ;
+    rdfs:label "Capability" ;
+    rdfs:comment "A business capability that the organization needs to achieve its goals" .
+
+ag:Actor a owl:Class ;
+    rdfs:label "Actor" ;
+    rdfs:comment "A person, role, or organizational unit that interacts with systems" .
+
+ag:Process a owl:Class ;
+    rdfs:label "Process" ;
+    rdfs:comment "A business process that transforms inputs into outputs" .
+
+ag:Location a owl:Class ;
+    rdfs:label "Location" ;
+    rdfs:comment "A physical or logical location where systems or actors operate" .
+
+# =============================================================================
+# Object Properties (Relationships)
+# =============================================================================
+
+ag:supports a owl:ObjectProperty ;
+    rdfs:label "supports" ;
+    rdfs:comment "Indicates that a system supports a capability or process" ;
+    rdfs:domain ag:System ;
+    rdfs:range [ owl:unionOf (ag:Capability ag:Process) ] .
+
+ag:uses a owl:ObjectProperty ;
+    rdfs:label "uses" ;
+    rdfs:comment "Indicates that an actor uses a system" ;
+    rdfs:domain ag:Actor ;
+    rdfs:range ag:System .
+
+ag:performs a owl:ObjectProperty ;
+    rdfs:label "performs" ;
+    rdfs:comment "Indicates that an actor performs a process" ;
+    rdfs:domain ag:Actor ;
+    rdfs:range ag:Process .
+
+ag:realizesCapability a owl:ObjectProperty ;
+    rdfs:label "realizes capability" ;
+    rdfs:comment "Indicates that a process realizes a capability" ;
+    rdfs:domain ag:Process ;
+    rdfs:range ag:Capability .
+
+ag:locatedAt a owl:ObjectProperty ;
+    rdfs:label "located at" ;
+    rdfs:comment "Indicates the location of a system or actor" ;
+    rdfs:domain [ owl:unionOf (ag:System ag:Actor) ] ;
+    rdfs:range ag:Location .
+
+ag:dependsOn a owl:ObjectProperty ;
+    rdfs:label "depends on" ;
+    rdfs:comment "Indicates that a system depends on another system" ;
+    rdfs:domain ag:System ;
+    rdfs:range ag:System .
+
+ag:partOf a owl:ObjectProperty ;
+    rdfs:label "part of" ;
+    rdfs:comment "Indicates hierarchical containment" ;
+    rdfs:domain [ owl:unionOf (ag:Capability ag:Process ag:Location) ] ;
+    rdfs:range [ owl:unionOf (ag:Capability ag:Process ag:Location) ] .
+
+ag:hasOwner a owl:ObjectProperty ;
+    rdfs:label "has owner" ;
+    rdfs:comment "Indicates the responsible owner" ;
+    rdfs:range ag:Actor .
+
+# =============================================================================
+# Datatype Properties
+# =============================================================================
+
+ag:hasName a owl:DatatypeProperty ;
+    rdfs:label "name" ;
+    rdfs:comment "The name of the entity" ;
+    rdfs:range xsd:string .
+
+ag:hasDescription a owl:DatatypeProperty ;
+    rdfs:label "description" ;
+    rdfs:comment "A detailed description of the entity" ;
+    rdfs:range xsd:string .
+
+ag:hasStatus a owl:DatatypeProperty ;
+    rdfs:label "status" ;
+    rdfs:comment "The lifecycle status of the entity" ;
+    rdfs:range xsd:string .
+
+ag:createdDate a owl:DatatypeProperty ;
+    rdfs:label "created date" ;
+    rdfs:comment "The date the entity was created" ;
+    rdfs:range xsd:date .
+
+ag:isActive a owl:DatatypeProperty ;
+    rdfs:label "is active" ;
+    rdfs:comment "Whether the entity is currently active" ;
+    rdfs:range xsd:boolean .

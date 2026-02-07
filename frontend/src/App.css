@@ -45,3 +45,16 @@ td:first-child {
 .next-steps li {
   margin: 0.5rem 0;
 }
+
+.graph-explorer {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2rem;
+}
+
+.graph-explorer h2 {
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
