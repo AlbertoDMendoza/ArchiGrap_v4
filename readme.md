@@ -211,12 +211,12 @@ INSERT DATA {
 - Shape discovery via SPARQL (`sh:NodeShape` + `sh:targetClass`)
 - Form generation from `sh:property` constraints
 - 7 editor components mapped to `shui:` URIs
-- Entity create + delete via SPARQL
+- Entity create, edit, and delete via SPARQL
 - Dark theme UI
 
 ## Next Steps
 
-1. Edit existing entities (SELECT current values → form → DELETE/INSERT)
+1. ~~Edit existing entities (SELECT current values → form → DELETE/INSERT)~~ ✓
 2. View mode — implement viewers (`LiteralViewer`, `LabelViewer`, `URIViewer`, `LangStringViewer`, `HTMLViewer`, `ImageViewer`, `DetailsViewer`)
 3. Widget scoring — numeric scoring per spec instead of if/else
 4. Label resolution — `shui:propertyRole shui:LabelRole` + `sh:order`

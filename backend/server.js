@@ -11,8 +11,19 @@ app.use(cors())
 app.use(express.json())
 
 // GraphDB config
-const GRAPHDB_URL = process.env.GRAPHDB_URL || 'http://192.168.0.105:7200'
-const GRAPHDB_REPO = process.env.GRAPHDB_REPOSITORY || 'archigraph-v4'
+let GRAPHDB_URL = process.env.GRAPHDB_URL || 'http://192.168.0.105:7200'
+let GRAPHDB_REPO = process.env.GRAPHDB_REPOSITORY || 'archigraph-v4'
+
+// Predefined endpoints (from env or default to current)
+const GRAPHDB_ENDPOINTS = (() => {
+  try {
+    const raw = process.env.GRAPHDB_ENDPOINTS
+    if (raw) return JSON.parse(raw)
+  } catch (e) {
+    console.error('Failed to parse GRAPHDB_ENDPOINTS:', e.message)
+  }
+  return [{ name: 'Default', url: GRAPHDB_URL, repository: GRAPHDB_REPO }]
+})()
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -164,6 +175,37 @@ app.get('/api/instances', async (req, res) => {
     res.json(results)
   } catch (error) {
     res.status(500).json({ error: error.message })
+  }
+})
+
+// Get available endpoints
+app.get('/api/config/endpoints', (req, res) => {
+  res.json({
+    endpoints: GRAPHDB_ENDPOINTS,
+    active: { url: GRAPHDB_URL, repository: GRAPHDB_REPO }
+  })
+})
+
+// Switch active endpoint
+app.post('/api/config/endpoint', async (req, res) => {
+  const { url, repository } = req.body
+  if (!url || !repository) {
+    return res.status(400).json({ error: 'url and repository are required' })
+  }
+
+  try {
+    // Validate connection
+    await axios.get(`${url}/rest/repositories/${repository}/size`)
+
+    GRAPHDB_URL = url
+    GRAPHDB_REPO = repository
+    console.log(`Switched endpoint to ${url} / ${repository}`)
+
+    res.json({ success: true, url, repository })
+  } catch (error) {
+    res.status(502).json({
+      error: `Cannot connect to ${url}/repositories/${repository}: ${error.message}`
+    })
   }
 })
 

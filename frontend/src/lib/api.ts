@@ -32,6 +32,26 @@ export async function getHealth(): Promise<HealthResponse> {
   return response.data
 }
 
+export interface Endpoint {
+  name: string
+  url: string
+  repository: string
+}
+
+export interface EndpointsResponse {
+  endpoints: Endpoint[]
+  active: { url: string; repository: string }
+}
+
+export async function getEndpoints(): Promise<EndpointsResponse> {
+  const response = await api.get<EndpointsResponse>('/api/config/endpoints')
+  return response.data
+}
+
+export async function setEndpoint(url: string, repository: string): Promise<void> {
+  await api.post('/api/config/endpoint', { url, repository })
+}
+
 export async function sparqlQuery(query: string) {
   const response = await api.post('/api/sparql', { query })
   return response.data

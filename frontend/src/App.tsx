@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getHealth, type HealthResponse } from './lib/api'
+import { getHealth, getEndpoints, setEndpoint, type HealthResponse, type Endpoint } from './lib/api'
 import { EntityManager } from './shacl/EntityManager'
 import './App.css'
 
@@ -7,12 +7,32 @@ function App() {
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([])
+  const [activeEndpoint, setActiveEndpoint] = useState<string>('')
+  const [switching, setSwitching] = useState(false)
+
+  const endpointKey = activeEndpoint
+
+  async function refreshHealth() {
+    try {
+      const data = await getHealth()
+      setHealth(data)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect')
+    }
+  }
 
   useEffect(() => {
-    async function checkHealth() {
+    async function init() {
       try {
-        const data = await getHealth()
-        setHealth(data)
+        const [healthData, endpointsData] = await Promise.all([
+          getHealth(),
+          getEndpoints()
+        ])
+        setHealth(healthData)
+        setEndpoints(endpointsData.endpoints)
+        setActiveEndpoint(`${endpointsData.active.url}|${endpointsData.active.repository}`)
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to connect')
@@ -20,9 +40,23 @@ function App() {
         setLoading(false)
       }
     }
-    
-    checkHealth()
+
+    init()
   }, [])
+
+  async function handleEndpointChange(value: string) {
+    const [url, repository] = value.split('|')
+    setSwitching(true)
+    try {
+      await setEndpoint(url, repository)
+      setActiveEndpoint(value)
+      await refreshHealth()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to switch endpoint')
+    } finally {
+      setSwitching(false)
+    }
+  }
 
   if (loading) {
     return <div className="container">
@@ -49,6 +83,26 @@ function App() {
       
       <div className="status-card">
         <h2>✅ System Status</h2>
+        {endpoints.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <label htmlFor="endpoint-select" style={{ marginRight: '0.5rem' }}>
+              <strong>Endpoint:</strong>
+            </label>
+            <select
+              id="endpoint-select"
+              value={activeEndpoint}
+              onChange={(e) => handleEndpointChange(e.target.value)}
+              disabled={switching}
+            >
+              {endpoints.map((ep) => (
+                <option key={`${ep.url}|${ep.repository}`} value={`${ep.url}|${ep.repository}`}>
+                  {ep.name}
+                </option>
+              ))}
+            </select>
+            {switching && <span style={{ marginLeft: '0.5rem' }}>Switching...</span>}
+          </div>
+        )}
         <table>
           <tbody>
             <tr>
@@ -81,7 +135,7 @@ function App() {
 
       <div className="entity-manager-section">
         <h2>📝 Entity Manager</h2>
-        <EntityManager />
+        <EntityManager key={endpointKey} />
       </div>
 
     </div>
