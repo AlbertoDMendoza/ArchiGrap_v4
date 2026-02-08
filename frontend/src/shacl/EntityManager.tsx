@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getEntityTypes, listEntities, deleteEntity, getEntityValues } from '../lib/sparql'
 import { SHACLForm, type FormValues } from './SHACLForm'
+import { SHACLView } from './SHACLView'
 import './EntityManager.css'
 
 interface EntityType {
@@ -20,6 +21,8 @@ export function EntityManager() {
   const [showForm, setShowForm] = useState(false)
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [editValues, setEditValues] = useState<FormValues | null>(null)
+  const [viewingEntity, setViewingEntity] = useState<Entity | null>(null)
+  const [viewValues, setViewValues] = useState<FormValues | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -44,6 +47,8 @@ export function EntityManager() {
     setShowForm(false)
     setEditingEntity(null)
     setEditValues(null)
+    setViewingEntity(null)
+    setViewValues(null)
     setMessage(null)
   }
 
@@ -55,6 +60,34 @@ export function EntityManager() {
     }
   }
 
+  const handleViewClick = async (entity: Entity) => {
+    if (!selectedType) return
+    try {
+      setMessage(null)
+      const values = await getEntityValues(entity.uri, selectedType.uri)
+      setViewingEntity(entity)
+      setViewValues(values)
+      setEditingEntity(null)
+      setEditValues(null)
+      setShowForm(false)
+    } catch (err) {
+      setMessage(`Error loading entity: ${err instanceof Error ? err.message : 'Failed'}`)
+    }
+  }
+
+  const handleViewToEdit = async () => {
+    if (!viewingEntity || !selectedType) return
+    try {
+      const values = await getEntityValues(viewingEntity.uri, selectedType.uri)
+      setEditingEntity(viewingEntity)
+      setEditValues(values)
+      setViewingEntity(null)
+      setViewValues(null)
+    } catch (err) {
+      setMessage(`Error loading entity: ${err instanceof Error ? err.message : 'Failed'}`)
+    }
+  }
+
   const handleEditClick = async (entity: Entity) => {
     if (!selectedType) return
     try {
@@ -62,6 +95,8 @@ export function EntityManager() {
       const values = await getEntityValues(entity.uri, selectedType.uri)
       setEditingEntity(entity)
       setEditValues(values)
+      setViewingEntity(null)
+      setViewValues(null)
       setShowForm(false)
     } catch (err) {
       setMessage(`Error loading entity: ${err instanceof Error ? err.message : 'Failed'}`)
@@ -80,6 +115,11 @@ export function EntityManager() {
   const handleEditCancel = () => {
     setEditingEntity(null)
     setEditValues(null)
+  }
+
+  const handleViewBack = () => {
+    setViewingEntity(null)
+    setViewValues(null)
   }
 
   const handleDelete = async (entity: Entity) => {
@@ -138,6 +178,15 @@ export function EntityManager() {
             onSuccess={handleEditSuccess}
             onCancel={handleEditCancel}
           />
+        ) : viewingEntity && viewValues ? (
+          <SHACLView
+            classUri={selectedType.uri}
+            classLabel={selectedType.label}
+            entityUri={viewingEntity.uri}
+            values={viewValues}
+            onEdit={handleViewToEdit}
+            onBack={handleViewBack}
+          />
         ) : (
           <>
             <div className="entity-header">
@@ -161,9 +210,20 @@ export function EntityManager() {
                 <tbody>
                   {entities.map(entity => (
                     <tr key={entity.uri}>
-                      <td>{entity.label}</td>
+                      <td
+                        className="entity-name"
+                        onClick={() => handleViewClick(entity)}
+                      >
+                        {entity.label}
+                      </td>
                       <td className="uri">{entity.uri.split('#').pop()}</td>
                       <td>
+                        <button
+                          className="view-btn"
+                          onClick={() => handleViewClick(entity)}
+                        >
+                          View
+                        </button>
                         <button
                           className="edit-btn"
                           onClick={() => handleEditClick(entity)}

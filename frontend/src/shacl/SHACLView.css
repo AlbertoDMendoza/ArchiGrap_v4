@@ -1,0 +1,135 @@
+.shacl-view {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 500px;
+}
+
+.shacl-view h3 {
+  margin: 0 0 0.25rem 0;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-view-type {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 1.25rem;
+}
+
+.shacl-view-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shacl-view-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.shacl-view-field dt {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.shacl-view-field dd {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.87);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Viewer component styles */
+.viewer-uri,
+.viewer-hyperlink {
+  color: #646cff;
+  text-decoration: none;
+}
+
+.viewer-uri:hover,
+.viewer-hyperlink:hover {
+  text-decoration: underline;
+}
+
+.viewer-langstring .lang-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  background: #333;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.6);
+  vertical-align: middle;
+}
+
+.viewer-html {
+  line-height: 1.6;
+}
+
+.viewer-html a {
+  color: #646cff;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+/* Actions */
+.shacl-view-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.shacl-view-actions button {
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background: #646cff;
+  color: white;
+}
+
+.shacl-view-actions button:hover {
+  background: #535bf2;
+}
+
+.shacl-view-actions .back-btn {
+  background: #333;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.shacl-view-actions .back-btn:hover {
+  background: #444;
+}
+
+/* Loading/Error states */
+.shacl-view-loading,
+.shacl-view-error {
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.shacl-view-loading {
+  background: #1a1a1a;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.shacl-view-error {
+  background: #3d1a1f;
+  color: #f5a3aa;
+  border: 1px solid #dc3545;
+}

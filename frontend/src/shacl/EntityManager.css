@@ -129,6 +129,30 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.entity-table .entity-name {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.entity-table .entity-name:hover {
+  color: #646cff;
+}
+
+.entity-table .view-btn {
+  background: #444;
+  color: rgba(255, 255, 255, 0.87);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.entity-table .view-btn:hover {
+  background: #555;
+}
+
 .entity-table .edit-btn {
   background: #646cff;
   color: white;
