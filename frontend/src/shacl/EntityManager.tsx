@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { getEntityTypes, listEntities, deleteEntity, getEntityValues } from '../lib/sparql'
+import { getEntityTypeTree, listEntities, deleteEntity, getEntityValues, type EntityTypeNode } from '../lib/sparql'
 import { SHACLForm, type FormValues } from './SHACLForm'
 import { SHACLView } from './SHACLView'
+import { EntityTypeTree } from './EntityTypeTree'
 import './EntityManager.css'
 
 interface EntityType {
@@ -15,7 +16,7 @@ interface Entity {
 }
 
 export function EntityManager() {
-  const [entityTypes, setEntityTypes] = useState<EntityType[]>([])
+  const [typeTree, setTypeTree] = useState<EntityTypeNode[]>([])
   const [selectedType, setSelectedType] = useState<EntityType | null>(null)
   const [entities, setEntities] = useState<Entity[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -28,8 +29,8 @@ export function EntityManager() {
 
   // Load entity types on mount
   useEffect(() => {
-    getEntityTypes()
-      .then(setEntityTypes)
+    getEntityTypeTree()
+      .then(setTypeTree)
       .finally(() => setLoading(false))
   }, [])
 
@@ -142,20 +143,14 @@ export function EntityManager() {
     <div className="entity-manager">
       <div className="entity-types">
         <h3>Entity Types</h3>
-        {entityTypes.length === 0 ? (
+        {typeTree.length === 0 ? (
           <p className="no-types">No SHACL shapes found. Load SHACL shapes into GraphDB.</p>
         ) : (
-          <ul>
-            {entityTypes.map(type => (
-              <li
-                key={type.uri}
-                className={selectedType?.uri === type.uri ? 'selected' : ''}
-                onClick={() => handleTypeSelect(type)}
-              >
-                {type.label}
-              </li>
-            ))}
-          </ul>
+          <EntityTypeTree
+            nodes={typeTree}
+            selectedUri={selectedType?.uri || null}
+            onSelect={(uri, label) => handleTypeSelect({ uri, label })}
+          />
         )}
       </div>
 

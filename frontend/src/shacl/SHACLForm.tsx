@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getShapeProperties, createEntity, updateEntity, type ShapeProperty } from '../lib/sparql'
+import { getShapeProperties, getClassAncestors, createEntity, updateEntity, type ShapeProperty } from '../lib/sparql'
 import { getEditor } from './editors'
 import './SHACLForm.css'
 
@@ -22,6 +22,7 @@ export interface FormValues {
 
 export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSuccess, onCancel }: SHACLFormProps) {
   const [properties, setProperties] = useState<ShapeProperty[]>([])
+  const [ancestors, setAncestors] = useState<{ uri: string; label: string }[]>([])
   const [values, setValues] = useState<FormValues>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -31,9 +32,13 @@ export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSu
 
   useEffect(() => {
     setLoading(true)
-    getShapeProperties(classUri)
-      .then(props => {
+    Promise.all([
+      getShapeProperties(classUri),
+      getClassAncestors(classUri)
+    ])
+      .then(([props, anc]) => {
         setProperties(props)
+        setAncestors(anc)
         // Initialize form values from initialValues or empty
         const initial: FormValues = {}
         for (const prop of props) {
@@ -90,6 +95,18 @@ export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSu
 
   return (
     <form className="shacl-form" onSubmit={handleSubmit}>
+      {ancestors.length > 0 && (
+        <div className="hierarchy-breadcrumb">
+          {ancestors.map((a, i) => (
+            <span key={a.uri}>
+              {i > 0 && <span className="breadcrumb-sep"> &gt; </span>}
+              {a.label}
+            </span>
+          ))}
+          <span className="breadcrumb-sep"> &gt; </span>
+          {classLabel}
+        </div>
+      )}
       <h3>{isEdit ? 'Edit' : 'Create'} {classLabel}</h3>
 
       {properties.map(prop => {

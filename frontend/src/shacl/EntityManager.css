@@ -1,6 +1,6 @@
 .entity-manager {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 250px 1fr;
   gap: 1.5rem;
   min-height: 400px;
 }
@@ -45,6 +45,74 @@
 .entity-types .no-types {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.9rem;
+}
+
+/* Entity Type Tree */
+.entity-type-tree {
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.tree-node:hover {
+  background: #2a2a2a;
+}
+
+.tree-node.selected {
+  background: #646cff;
+  color: white;
+}
+
+.tree-node.group-only {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.tree-node.group-only:hover {
+  background: #222;
+}
+
+.tree-toggle {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  line-height: 16px;
+  text-align: center;
+}
+
+.tree-toggle.collapsed::before {
+  content: '\25B6';
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tree-toggle.expanded::before {
+  content: '\25BC';
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tree-toggle.leaf::before {
+  content: '';
+}
+
+.tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entity-content {

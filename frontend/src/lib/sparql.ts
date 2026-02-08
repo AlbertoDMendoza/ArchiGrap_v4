@@ -7,6 +7,7 @@ PREFIX archimate: <https://purl.org/archimate#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
 `
 
 export interface SparqlBinding {
@@ -37,11 +38,18 @@ export async function sparqlUpdate(query: string): Promise<void> {
 }
 
 // Get all entity types that have SHACL shapes
+// Supports both explicit (sh:targetClass) and implicit (shape URI = class URI) target patterns
 export async function getEntityTypes(): Promise<{ uri: string; label: string }[]> {
   const results = await sparqlSelect(`
     SELECT DISTINCT ?class ?label WHERE {
-      ?shape a sh:NodeShape ;
-             sh:targetClass ?class .
+      {
+        ?shape a sh:NodeShape ;
+               sh:targetClass ?class .
+      } UNION {
+        ?class a sh:NodeShape .
+        ?class sh:property ?_p .
+        FILTER NOT EXISTS { ?class sh:targetClass ?_any }
+      }
       OPTIONAL { ?class rdfs:label ?label }
     }
     ORDER BY ?label
@@ -51,6 +59,167 @@ export async function getEntityTypes(): Promise<{ uri: string; label: string }[]
     uri: r.class.value,
     label: r.label?.value || r.class.value.split('#').pop() || r.class.value
   }))
+}
+
+// Tree node for hierarchical entity type display
+export interface EntityTypeNode {
+  uri: string
+  label: string
+  isShape: boolean  // false = grouping-only node, not selectable
+  children: EntityTypeNode[]
+}
+
+// Get entity types organized as a tree based on rdfs:subClassOf
+export async function getEntityTypeTree(): Promise<EntityTypeNode[]> {
+  const results = await sparqlSelect(`
+    SELECT DISTINCT ?class ?label ?parent ?parentLabel WHERE {
+      {
+        ?shape a sh:NodeShape ; sh:targetClass ?class .
+      } UNION {
+        ?class a sh:NodeShape ; sh:property ?_p .
+        FILTER NOT EXISTS { ?class sh:targetClass ?_any }
+      }
+      OPTIONAL { ?class rdfs:label ?label }
+      OPTIONAL {
+        ?class rdfs:subClassOf ?parent .
+        FILTER(?parent != ?class)
+        FILTER(?parent != owl:Thing)
+        FILTER(?parent != <http://www.w3.org/2002/07/owl#Thing>)
+        FILTER(!isBlank(?parent))
+        FILTER NOT EXISTS {
+          ?class rdfs:subClassOf ?mid .
+          ?mid rdfs:subClassOf ?parent .
+          FILTER(?mid != ?class)
+          FILTER(?mid != ?parent)
+        }
+        OPTIONAL { ?parent rdfs:label ?parentLabel }
+      }
+    }
+  `)
+
+  // Collect all shape classes and their parent relationships
+  const shapeUris = new Set<string>()
+  const classLabels = new Map<string, string>()
+  const childToParents = new Map<string, Set<string>>()
+
+  for (const r of results) {
+    const classUri = r.class.value
+    shapeUris.add(classUri)
+    classLabels.set(classUri, r.label?.value || classUri.split('#').pop() || classUri.split('/').pop() || classUri)
+
+    if (r.parent) {
+      const parentUri = r.parent.value
+      if (!childToParents.has(classUri)) childToParents.set(classUri, new Set())
+      childToParents.get(classUri)!.add(parentUri)
+      // Store parent label too (it may be a grouping node)
+      if (r.parentLabel && !classLabels.has(parentUri)) {
+        classLabels.set(parentUri, r.parentLabel.value)
+      } else if (!classLabels.has(parentUri)) {
+        classLabels.set(parentUri, parentUri.split('#').pop() || parentUri.split('/').pop() || parentUri)
+      }
+    }
+  }
+
+  // Build parent-to-children map
+  const parentToChildren = new Map<string, Set<string>>()
+  for (const [child, parents] of childToParents) {
+    for (const parent of parents) {
+      if (!parentToChildren.has(parent)) parentToChildren.set(parent, new Set())
+      parentToChildren.get(parent)!.add(child)
+    }
+  }
+
+  // Find all ancestor URIs that are used as parents but aren't shapes themselves
+  const groupOnlyUris = new Set<string>()
+  for (const [, parents] of childToParents) {
+    for (const p of parents) {
+      if (!shapeUris.has(p)) groupOnlyUris.add(p)
+    }
+  }
+
+  // All relevant URIs (shapes + grouping nodes)
+  const allUris = new Set([...shapeUris, ...groupOnlyUris])
+
+  // Build tree recursively, allowing duplicates for multiple inheritance
+  // but preventing cycles by tracking ancestors on the current path
+  function buildNode(uri: string, pathAncestors: Set<string>): EntityTypeNode {
+    const childUris = parentToChildren.get(uri) || new Set()
+    const children: EntityTypeNode[] = []
+    const nextAncestors = new Set(pathAncestors)
+    nextAncestors.add(uri)
+    for (const childUri of childUris) {
+      if (allUris.has(childUri) && !nextAncestors.has(childUri)) {
+        children.push(buildNode(childUri, nextAncestors))
+      }
+    }
+    children.sort((a, b) => a.label.localeCompare(b.label))
+    return {
+      uri,
+      label: classLabels.get(uri) || uri,
+      isShape: shapeUris.has(uri),
+      children
+    }
+  }
+
+  // Root nodes: classes/groups that have no qualifying parent in our set
+  const roots: EntityTypeNode[] = []
+  for (const uri of allUris) {
+    const parents = childToParents.get(uri)
+    const hasQualifyingParent = parents && [...parents].some(p => allUris.has(p))
+    if (!hasQualifyingParent) {
+      roots.push(buildNode(uri, new Set()))
+    }
+  }
+  roots.sort((a, b) => a.label.localeCompare(b.label))
+
+  return roots
+}
+
+// Get ancestor classes for breadcrumb display
+// Fetches direct-parent pairs and walks the chain client-side
+// to avoid issues with RDFS transitive closure inference
+export async function getClassAncestors(classUri: string): Promise<{ uri: string; label: string }[]> {
+  const results = await sparqlSelect(`
+    SELECT DISTINCT ?child ?parent ?parentLabel WHERE {
+      ?child rdfs:subClassOf ?parent .
+      FILTER(?parent != ?child)
+      FILTER(?parent != owl:Thing)
+      FILTER(?parent != <http://www.w3.org/2002/07/owl#Thing>)
+      FILTER(!isBlank(?parent))
+      FILTER NOT EXISTS {
+        ?child rdfs:subClassOf ?mid .
+        ?mid rdfs:subClassOf ?parent .
+        FILTER(?mid != ?child)
+        FILTER(?mid != ?parent)
+      }
+      OPTIONAL { ?parent rdfs:label ?parentLabel }
+    }
+  `)
+
+  // Build child->direct parent map
+  const directParent = new Map<string, { uri: string; label: string }>()
+  for (const r of results) {
+    const childUri = r.child.value
+    const parentUri = r.parent.value
+    const parentLabel = r.parentLabel?.value || parentUri.split('#').pop() || parentUri.split('/').pop() || parentUri
+    // For multiple parents, just pick the first one for breadcrumb
+    if (!directParent.has(childUri)) {
+      directParent.set(childUri, { uri: parentUri, label: parentLabel })
+    }
+  }
+
+  // Walk up from classUri
+  const ancestors: { uri: string; label: string }[] = []
+  const visited = new Set<string>()
+  let current = classUri
+  while (directParent.has(current) && !visited.has(current)) {
+    visited.add(current)
+    const parent = directParent.get(current)!
+    ancestors.unshift(parent) // prepend so root is first
+    current = parent.uri
+  }
+
+  return ancestors
 }
 
 // Get shape properties for a class
@@ -73,9 +242,15 @@ export async function getShapeProperties(classUri: string): Promise<ShapePropert
   const results = await sparqlSelect(`
     SELECT ?path ?name ?description ?datatype ?class ?editor ?viewer ?minCount ?maxCount ?order ?propertyRole
     WHERE {
-      ?shape a sh:NodeShape ;
-             sh:targetClass <${classUri}> ;
-             sh:property ?prop .
+      {
+        ?shape a sh:NodeShape ;
+               sh:targetClass <${classUri}> .
+      } UNION {
+        BIND(<${classUri}> AS ?shape)
+        ?shape a sh:NodeShape .
+        FILTER NOT EXISTS { ?shape sh:targetClass ?_any }
+      }
+      ?shape sh:property ?prop .
 
       ?prop sh:path ?path .
       OPTIONAL { ?prop sh:name ?name }
@@ -125,9 +300,15 @@ export async function getShapeProperties(classUri: string): Promise<ShapePropert
 async function getEnumValues(classUri: string, pathUri: string): Promise<string[]> {
   const results = await sparqlSelect(`
     SELECT ?val WHERE {
-      ?shape a sh:NodeShape ;
-             sh:targetClass <${classUri}> ;
-             sh:property ?prop .
+      {
+        ?shape a sh:NodeShape ;
+               sh:targetClass <${classUri}> .
+      } UNION {
+        BIND(<${classUri}> AS ?shape)
+        ?shape a sh:NodeShape .
+        FILTER NOT EXISTS { ?shape sh:targetClass ?_any }
+      }
+      ?shape sh:property ?prop .
       ?prop sh:path <${pathUri}> ;
             sh:in ?list .
       ?list rdf:rest*/rdf:first ?val .
@@ -206,9 +387,15 @@ export async function getEntityValues(
 ): Promise<Record<string, { value: string; isUri: boolean; datatype?: string }>> {
   const results = await sparqlSelect(`
     SELECT ?path ?value ?isUri ?datatype WHERE {
-      ?shape a sh:NodeShape ;
-             sh:targetClass <${classUri}> ;
-             sh:property ?prop .
+      {
+        ?shape a sh:NodeShape ;
+               sh:targetClass <${classUri}> .
+      } UNION {
+        BIND(<${classUri}> AS ?shape)
+        ?shape a sh:NodeShape .
+        FILTER NOT EXISTS { ?shape sh:targetClass ?_any }
+      }
+      ?shape sh:property ?prop .
       ?prop sh:path ?path .
       <${entityUri}> ?path ?value .
       BIND(isIRI(?value) AS ?isUri)
@@ -236,9 +423,15 @@ export async function updateEntity(
   // Get all paths from the shape to know what to delete
   const shapeResults = await sparqlSelect(`
     SELECT ?path WHERE {
-      ?shape a sh:NodeShape ;
-             sh:targetClass <${classUri}> ;
-             sh:property ?prop .
+      {
+        ?shape a sh:NodeShape ;
+               sh:targetClass <${classUri}> .
+      } UNION {
+        BIND(<${classUri}> AS ?shape)
+        ?shape a sh:NodeShape .
+        FILTER NOT EXISTS { ?shape sh:targetClass ?_any }
+      }
+      ?shape sh:property ?prop .
       ?prop sh:path ?path .
     }
   `)

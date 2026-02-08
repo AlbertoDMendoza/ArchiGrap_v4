@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getShapeProperties, type ShapeProperty } from '../lib/sparql'
+import { getShapeProperties, getClassAncestors, type ShapeProperty } from '../lib/sparql'
 import { getViewer } from './viewers'
 import type { FormValues } from './SHACLForm'
 import './SHACLView.css'
@@ -15,13 +15,20 @@ interface SHACLViewProps {
 
 export function SHACLView({ classUri, classLabel, entityUri, values, onEdit, onBack }: SHACLViewProps) {
   const [properties, setProperties] = useState<ShapeProperty[]>([])
+  const [ancestors, setAncestors] = useState<{ uri: string; label: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
-    getShapeProperties(classUri)
-      .then(setProperties)
+    Promise.all([
+      getShapeProperties(classUri),
+      getClassAncestors(classUri)
+    ])
+      .then(([props, anc]) => {
+        setProperties(props)
+        setAncestors(anc)
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [classUri])
@@ -38,6 +45,18 @@ export function SHACLView({ classUri, classLabel, entityUri, values, onEdit, onB
 
   return (
     <div className="shacl-view">
+      {ancestors.length > 0 && (
+        <div className="hierarchy-breadcrumb">
+          {ancestors.map((a, i) => (
+            <span key={a.uri}>
+              {i > 0 && <span className="breadcrumb-sep"> &gt; </span>}
+              {a.label}
+            </span>
+          ))}
+          <span className="breadcrumb-sep"> &gt; </span>
+          {classLabel}
+        </div>
+      )}
       <h3>{entityLabel}</h3>
       <span className="shacl-view-type">{classLabel}</span>
 
