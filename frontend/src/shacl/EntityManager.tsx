@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getEntityTypes, listEntities, deleteEntity } from '../lib/sparql'
-import { SHACLForm } from './SHACLForm'
+import { getEntityTypes, listEntities, deleteEntity, getEntityValues } from '../lib/sparql'
+import { SHACLForm, type FormValues } from './SHACLForm'
 import './EntityManager.css'
 
 interface EntityType {
@@ -18,6 +18,8 @@ export function EntityManager() {
   const [selectedType, setSelectedType] = useState<EntityType | null>(null)
   const [entities, setEntities] = useState<Entity[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
+  const [editValues, setEditValues] = useState<FormValues | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -40,16 +42,44 @@ export function EntityManager() {
   const handleTypeSelect = (type: EntityType) => {
     setSelectedType(type)
     setShowForm(false)
+    setEditingEntity(null)
+    setEditValues(null)
     setMessage(null)
   }
 
   const handleCreateSuccess = (entityUri: string) => {
     setShowForm(false)
     setMessage(`Created: ${entityUri.split('#').pop()}`)
-    // Refresh entity list
     if (selectedType) {
       listEntities(selectedType.uri).then(setEntities)
     }
+  }
+
+  const handleEditClick = async (entity: Entity) => {
+    if (!selectedType) return
+    try {
+      setMessage(null)
+      const values = await getEntityValues(entity.uri, selectedType.uri)
+      setEditingEntity(entity)
+      setEditValues(values)
+      setShowForm(false)
+    } catch (err) {
+      setMessage(`Error loading entity: ${err instanceof Error ? err.message : 'Failed'}`)
+    }
+  }
+
+  const handleEditSuccess = (_entityUri: string) => {
+    setEditingEntity(null)
+    setEditValues(null)
+    setMessage(`Updated: ${editingEntity?.label}`)
+    if (selectedType) {
+      listEntities(selectedType.uri).then(setEntities)
+    }
+  }
+
+  const handleEditCancel = () => {
+    setEditingEntity(null)
+    setEditValues(null)
   }
 
   const handleDelete = async (entity: Entity) => {
@@ -99,6 +129,15 @@ export function EntityManager() {
             onSuccess={handleCreateSuccess}
             onCancel={() => setShowForm(false)}
           />
+        ) : editingEntity && editValues ? (
+          <SHACLForm
+            classUri={selectedType.uri}
+            classLabel={selectedType.label}
+            entityUri={editingEntity.uri}
+            initialValues={editValues}
+            onSuccess={handleEditSuccess}
+            onCancel={handleEditCancel}
+          />
         ) : (
           <>
             <div className="entity-header">
@@ -125,6 +164,12 @@ export function EntityManager() {
                       <td>{entity.label}</td>
                       <td className="uri">{entity.uri.split('#').pop()}</td>
                       <td>
+                        <button
+                          className="edit-btn"
+                          onClick={() => handleEditClick(entity)}
+                        >
+                          Edit
+                        </button>
                         <button
                           className="delete-btn"
                           onClick={() => handleDelete(entity)}

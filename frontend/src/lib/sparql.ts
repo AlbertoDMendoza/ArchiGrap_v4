@@ -199,6 +199,78 @@ export async function listEntities(classUri: string): Promise<{ uri: string; lab
   }))
 }
 
+// Get current property values for an entity based on its shape
+export async function getEntityValues(
+  entityUri: string,
+  classUri: string
+): Promise<Record<string, { value: string; isUri: boolean; datatype?: string }>> {
+  const results = await sparqlSelect(`
+    SELECT ?path ?value ?isUri ?datatype WHERE {
+      ?shape a sh:NodeShape ;
+             sh:targetClass <${classUri}> ;
+             sh:property ?prop .
+      ?prop sh:path ?path .
+      <${entityUri}> ?path ?value .
+      BIND(isIRI(?value) AS ?isUri)
+      BIND(DATATYPE(?value) AS ?datatype)
+    }
+  `)
+
+  const values: Record<string, { value: string; isUri: boolean; datatype?: string }> = {}
+  for (const r of results) {
+    values[r.path.value] = {
+      value: r.value.value,
+      isUri: r.isUri.value === 'true',
+      datatype: r.datatype?.value
+    }
+  }
+  return values
+}
+
+// Update an entity by deleting old shape-managed triples and inserting new ones
+export async function updateEntity(
+  entityUri: string,
+  classUri: string,
+  properties: Record<string, { value: string; isUri?: boolean; datatype?: string }>
+): Promise<void> {
+  // Get all paths from the shape to know what to delete
+  const shapeResults = await sparqlSelect(`
+    SELECT ?path WHERE {
+      ?shape a sh:NodeShape ;
+             sh:targetClass <${classUri}> ;
+             sh:property ?prop .
+      ?prop sh:path ?path .
+    }
+  `)
+  const paths = shapeResults.map(r => r.path.value)
+
+  // Build DELETE query for all shape-managed paths
+  const deleteTriples = paths.map((p, i) => `<${entityUri}> <${p}> ?old${i} .`).join('\n  ')
+  const optionals = paths.map((p, i) => `OPTIONAL { <${entityUri}> <${p}> ?old${i} }`).join('\n  ')
+
+  await sparqlUpdate(`
+    DELETE { ${deleteTriples} }
+    WHERE { ${optionals} }
+  `)
+
+  // Build INSERT for new values
+  let insertTriples = ''
+  for (const [path, prop] of Object.entries(properties)) {
+    if (!prop.value) continue
+    if (prop.isUri) {
+      insertTriples += `<${entityUri}> <${path}> <${prop.value}> .\n`
+    } else if (prop.datatype) {
+      insertTriples += `<${entityUri}> <${path}> "${prop.value}"^^<${prop.datatype}> .\n`
+    } else {
+      insertTriples += `<${entityUri}> <${path}> "${prop.value}" .\n`
+    }
+  }
+
+  if (insertTriples) {
+    await sparqlUpdate(`INSERT DATA { ${insertTriples} }`)
+  }
+}
+
 // Delete an entity
 export async function deleteEntity(entityUri: string): Promise<void> {
   await sparqlUpdate(`DELETE WHERE { <${entityUri}> ?p ?o }`)

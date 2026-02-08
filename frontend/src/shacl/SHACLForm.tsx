@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
-import { getShapeProperties, createEntity, type ShapeProperty } from '../lib/sparql'
+import { getShapeProperties, createEntity, updateEntity, type ShapeProperty } from '../lib/sparql'
 import { getEditor } from './editors'
 import './SHACLForm.css'
 
 interface SHACLFormProps {
   classUri: string
   classLabel: string
+  entityUri?: string
+  initialValues?: FormValues
   onSuccess?: (entityUri: string) => void
   onCancel?: () => void
 }
 
-interface FormValues {
+export interface FormValues {
   [path: string]: {
     value: string
     isUri?: boolean
@@ -18,22 +20,24 @@ interface FormValues {
   }
 }
 
-export function SHACLForm({ classUri, classLabel, onSuccess, onCancel }: SHACLFormProps) {
+export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSuccess, onCancel }: SHACLFormProps) {
   const [properties, setProperties] = useState<ShapeProperty[]>([])
   const [values, setValues] = useState<FormValues>({})
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const isEdit = !!entityUri
+
   useEffect(() => {
     setLoading(true)
     getShapeProperties(classUri)
       .then(props => {
         setProperties(props)
-        // Initialize form values
+        // Initialize form values from initialValues or empty
         const initial: FormValues = {}
         for (const prop of props) {
-          initial[prop.path] = {
+          initial[prop.path] = initialValues?.[prop.path] ?? {
             value: '',
             isUri: !!prop.class,
             datatype: prop.datatype
@@ -43,7 +47,7 @@ export function SHACLForm({ classUri, classLabel, onSuccess, onCancel }: SHACLFo
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
-  }, [classUri])
+  }, [classUri, initialValues])
 
   const handleChange = (path: string, value: string, isUri?: boolean) => {
     setValues(prev => ({
@@ -62,10 +66,15 @@ export function SHACLForm({ classUri, classLabel, onSuccess, onCancel }: SHACLFo
     setError(null)
 
     try {
-      const entityUri = await createEntity(classUri, values)
-      onSuccess?.(entityUri)
+      if (isEdit) {
+        await updateEntity(entityUri, classUri, values)
+        onSuccess?.(entityUri)
+      } else {
+        const newUri = await createEntity(classUri, values)
+        onSuccess?.(newUri)
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create entity')
+      setError(err instanceof Error ? err.message : `Failed to ${isEdit ? 'update' : 'create'} entity`)
     } finally {
       setSubmitting(false)
     }
@@ -81,7 +90,7 @@ export function SHACLForm({ classUri, classLabel, onSuccess, onCancel }: SHACLFo
 
   return (
     <form className="shacl-form" onSubmit={handleSubmit}>
-      <h3>Create {classLabel}</h3>
+      <h3>{isEdit ? 'Edit' : 'Create'} {classLabel}</h3>
 
       {properties.map(prop => {
         const Editor = getEditor(prop)
@@ -107,7 +116,7 @@ export function SHACLForm({ classUri, classLabel, onSuccess, onCancel }: SHACLFo
 
       <div className="shacl-form-actions">
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create'}
+          {submitting ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update' : 'Create')}
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={submitting}>

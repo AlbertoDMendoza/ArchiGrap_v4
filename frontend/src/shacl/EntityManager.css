@@ -129,6 +129,21 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.entity-table .edit-btn {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.entity-table .edit-btn:hover {
+  background: #535bf2;
+}
+
 .entity-table .delete-btn {
   background: #dc3545;
   color: white;
