@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@reactodia/workspace": "^0.31.2",
     "axios": "^1.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

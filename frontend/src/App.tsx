@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { getHealth, type HealthResponse } from './lib/api'
-import GraphExplorer from './components/GraphExplorer'
 import { EntityManager } from './shacl/EntityManager'
 import './App.css'
 
@@ -85,12 +84,6 @@ function App() {
         <EntityManager />
       </div>
 
-      <div className="graph-explorer">
-        <h2>🔍 Graph Explorer</h2>
-        <GraphExplorer
-          sparqlEndpoint={`${import.meta.env.VITE_API_URL}/api/sparql-proxy`}
-        />
-      </div>
     </div>
   )
 }

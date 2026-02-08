@@ -1,34 +1,37 @@
 # ArchiGraph v4
 
-Enterprise Architecture modeling tool with SHACL 1.2-driven generative UI.
+Generic SHACL 1.2 form renderer. Zero domain knowledge — all ontology, shapes, and data live in GraphDB. The app queries shapes via SPARQL, renders forms, and writes data back.
+
+**"The behavior of the app is presented in the data."**
 
 ## Architecture
 
-ArchiGraph uses a three-layer semantic architecture where UI forms are generated directly from SHACL shapes - no custom form code required.
+The app is a pure SHACL renderer. It discovers what to show by querying `sh:NodeShape` / `sh:targetClass` from GraphDB, reads `shui:editor` annotations to pick widgets, and writes instance data back via SPARQL INSERT.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Layer 3: SHACL UI Shapes (shapes.ttl)                          │
-│  ─────────────────────────────────────────────────────────────  │
-│  Defines how forms render using shui: namespace                 │
-│  • shui:editor → which widget to use                            │
-│  • shui:viewer → read-only display                              │
-│  • shui:propertyRole → label fields, key info                   │
-├─────────────────────────────────────────────────────────────────┤
-│  Layer 2: Data Ontology (core.ttl, archimate.ttl)               │
-│  ─────────────────────────────────────────────────────────────  │
-│  OWL classes and properties defining the domain model           │
-│  • Classes: System, Capability, Actor, Process, Location        │
-│  • Properties: supports, uses, performs, dependsOn              │
-├─────────────────────────────────────────────────────────────────┤
-│  Layer 1: Instance Data                                         │
-│  ─────────────────────────────────────────────────────────────  │
-│  Actual EA data created via forms, stored as RDF triples        │
-│  • ex:CRM a ag:System ; ag:hasName "CRM System" .               │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  GraphDB                                                         │
+│  ────────────────────────────────────────────────────────────── │
+│  Layer 3: SHACL UI Shapes                                        │
+│    sh:NodeShape + shui:editor annotations → drive form layout    │
+│                                                                  │
+│  Layer 2: Domain Ontology (e.g. ArchiMate)                       │
+│    OWL classes and properties loaded once                         │
+│                                                                  │
+│  Layer 1: Instance Data                                          │
+│    Created via forms, stored as RDF triples                      │
+└──────────────────────────────────────────────────────────────────┘
+        ▲                           │
+        │  SPARQL SELECT / INSERT   │
+        │                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  React Frontend                                                   │
+│  ────────────────────────────────────────────────────────────── │
+│  Generic SHACL form renderer — no domain-specific code           │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**Key principle**: Add a property to `shapes.ttl` → form field appears. No React code changes.
+**Key principle**: Add a shape to GraphDB → form appears. No React code changes.
 
 ## SHACL 1.2 UI Specification
 
@@ -73,14 +76,19 @@ Based on the W3C SHACL 1.2 UI spec: https://w3c.github.io/data-shapes/shacl12-ui
 shui:propertyRole shui:LabelRole
 ```
 
-### Example Shape
+### Example Shape (loaded into GraphDB)
 
 ```turtle
-shapes:SystemShape a sh:NodeShape ;
-    sh:targetClass ag:System ;
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix shui: <http://www.w3.org/ns/shacl-ui#> .
+@prefix archimate: <https://purl.org/archimate#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:shapes:BusinessActorShape> a sh:NodeShape ;
+    sh:targetClass archimate:BusinessActor ;
 
     sh:property [
-        sh:path ag:hasName ;
+        sh:path archimate:Name ;
         sh:name "Name" ;
         sh:datatype xsd:string ;
         sh:minCount 1 ;
@@ -90,26 +98,17 @@ shapes:SystemShape a sh:NodeShape ;
     ] ;
 
     sh:property [
-        sh:path ag:hasStatus ;
-        sh:name "Status" ;
-        sh:in ("Active" "Deprecated" "Planned" "Retired") ;
-        sh:minCount 1 ;
+        sh:path archimate:Documentation ;
+        sh:name "Documentation" ;
+        sh:datatype xsd:string ;
         sh:order 2 ;
-        shui:editor shui:EnumSelectEditor
-    ] ;
-
-    sh:property [
-        sh:path ag:hasOwner ;
-        sh:name "Owner" ;
-        sh:class ag:Actor ;
-        sh:order 3 ;
-        shui:editor shui:AutoCompleteEditor
+        shui:editor shui:TextAreaEditor
     ] .
 ```
 
 ## Data Flow
 
-All operations use SPARQL directly against GraphDB - no custom REST APIs for CRUD.
+All operations use SPARQL directly against GraphDB — no custom REST APIs for CRUD.
 
 ```
 ┌──────────────┐     SPARQL      ┌──────────────┐
@@ -117,10 +116,10 @@ All operations use SPARQL directly against GraphDB - no custom REST APIs for CRU
 │   Frontend   │ ◄────────────── │   (SPARQL)   │
 └──────────────┘                 └──────────────┘
         │                               │
-        │ 1. SELECT shape               │
-        │ 2. Render form                │
-        │ 3. INSERT DATA                │
-        │ 4. SELECT instances           │
+        │ 1. SELECT shapes             │
+        │ 2. Render forms              │
+        │ 3. INSERT DATA               │
+        │ 4. SELECT instances          │
         └───────────────────────────────┘
 ```
 
@@ -131,8 +130,8 @@ All operations use SPARQL directly against GraphDB - no custom REST APIs for CRU
 | List entity types | `SELECT ?class WHERE { ?shape sh:targetClass ?class }` |
 | Get shape for form | `SELECT ?prop ?editor ... WHERE { ?shape sh:targetClass <Class> ; sh:property ?p }` |
 | Get enum values | `SELECT ?val WHERE { ?prop sh:in/rdf:rest*/rdf:first ?val }` |
-| Autocomplete | `SELECT ?uri ?label WHERE { ?uri a <Class> ; ag:hasName ?label }` |
-| Create entity | `INSERT DATA { <uri> a <Class> ; ag:hasName "..." }` |
+| Autocomplete | `SELECT ?uri ?label WHERE { ?uri a <Class> ; archimate:Name ?label }` |
+| Create entity | `INSERT DATA { <uri> a <Class> ; archimate:Name "..." }` |
 | Update entity | `DELETE { <uri> ?p ?old } INSERT { <uri> ?p ?new } WHERE {...}` |
 | Delete entity | `DELETE WHERE { <uri> ?p ?o }` |
 
@@ -145,31 +144,60 @@ archigraph-v4/
 ├── frontend/
 │   └── src/
 │       ├── App.tsx
-│       ├── components/
+│       ├── shacl/
+│       │   ├── EntityManager.tsx   # Entity list + CRUD
+│       │   ├── SHACLForm.tsx       # Generic form renderer
+│       │   └── editors/
+│       │       └── index.tsx       # shui: URI → React component map
 │       └── lib/
-│           └── api.ts         # SPARQL query helpers
+│           ├── api.ts             # Axios client
+│           └── sparql.ts          # SPARQL query helpers
 ├── ontology/
-│   ├── core.ttl               # 5-concept data ontology (OWL)
-│   ├── shapes.ttl             # SHACL UI shapes (shui:)
-│   ├── sample-data.ttl        # Example instances
-│   └── archimate_ontology/    # Git submodule
+│   └── archimate_ontology/    # Git submodule (reference/source)
 │       ├── ontology/
-│       │   └── archimate.ttl  # Full ArchiMate ontology
+│       │   └── archimate.ttl  # Full ArchiMate 3.2 ontology
 │       └── validation/
 │           ├── archimate_core_validation.ttl
 │           └── archimate_derivation.ttl
 └── start.sh / stop.sh
 ```
 
-## Ontology Files
+## Loading Shapes into GraphDB
 
-| File | Purpose |
-|------|---------|
-| `core.ttl` | Simplified 5-concept OWL ontology (System, Capability, Actor, Process, Location) |
-| `shapes.ttl` | SHACL 1.2 UI shapes defining form structure with `shui:editor` annotations |
-| `archimate.ttl` | Full ArchiMate 3.2 ontology with RDF-Star support (optional, for interop) |
-| `archimate_core_validation.ttl` | SHACL validation rules for ArchiMate metamodel |
-| `archimate_derivation.ttl` | Derivation rules DR1-DR8, PDR1-PDR12 for relationship inference |
+The app has no built-in shapes. You must load SHACL shapes into GraphDB that target your domain classes. For ArchiMate:
+
+1. Load the ArchiMate ontology (`ontology/archimate_ontology/ontology/archimate.ttl`) into GraphDB
+2. Load SHACL shapes via SPARQL INSERT or Turtle file import
+
+Example — insert a shape via SPARQL:
+
+```sparql
+PREFIX sh: <http://www.w3.org/ns/shacl#>
+PREFIX shui: <http://www.w3.org/ns/shacl-ui#>
+PREFIX archimate: <https://purl.org/archimate#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+INSERT DATA {
+  <urn:shapes:BusinessActorShape> a sh:NodeShape ;
+    sh:targetClass archimate:BusinessActor ;
+    sh:property [
+      sh:path archimate:Name ;
+      sh:name "Name" ;
+      sh:datatype xsd:string ;
+      sh:minCount 1 ;
+      sh:order 1 ;
+      shui:editor shui:TextFieldEditor ;
+      shui:propertyRole shui:LabelRole
+    ] ;
+    sh:property [
+      sh:path archimate:Documentation ;
+      sh:name "Documentation" ;
+      sh:datatype xsd:string ;
+      sh:order 2 ;
+      shui:editor shui:TextAreaEditor
+    ] .
+}
+```
 
 ## Tech Stack
 
@@ -177,6 +205,25 @@ archigraph-v4/
 - **Backend**: Node.js + Express (SPARQL proxy only)
 - **Frontend**: React 19 + TypeScript + Vite
 - **Standards**: OWL 2, SHACL 1.2, SPARQL 1.1
+
+## Current Status
+
+- Shape discovery via SPARQL (`sh:NodeShape` + `sh:targetClass`)
+- Form generation from `sh:property` constraints
+- 7 editor components mapped to `shui:` URIs
+- Entity create + delete via SPARQL
+- Dark theme UI
+
+## Next Steps
+
+1. Edit existing entities (SELECT current values → form → DELETE/INSERT)
+2. View mode — implement viewers (`LiteralViewer`, `LabelViewer`, `URIViewer`, `LangStringViewer`, `HTMLViewer`, `ImageViewer`, `DetailsViewer`)
+3. Widget scoring — numeric scoring per spec instead of if/else
+4. Label resolution — `shui:propertyRole shui:LabelRole` + `sh:order`
+5. Multi-value properties — `sh:maxCount > 1` with add/remove UI
+6. DetailsEditor/DetailsViewer — nested forms for blank nodes
+7. Language-tagged strings — `TextFieldWithLangEditor`, `TextAreaWithLangEditor`, `LangStringViewer`
+8. ValueTableViewer — tabular display of multiple values
 
 ## Development
 
@@ -187,24 +234,6 @@ cd backend && npm run dev
 # Frontend
 cd frontend && npm run dev
 ```
-
-## Status
-
-### Done
-- [x] GraphDB repository with OWL 2 RL reasoning
-- [x] Core ontology (core.ttl) - 5 concepts
-- [x] SHACL UI shapes (shapes.ttl) - form definitions
-- [x] ArchiMate ontology loaded (via submodule)
-- [x] Validation rules loaded
-- [x] Derivation rules loaded
-- [x] Backend SPARQL proxy
-
-### Next
-- [ ] SHACLForm React component
-- [ ] Editor components (TextField, EnumSelect, AutoComplete, etc.)
-- [ ] Entity list view
-- [ ] Create/Edit/Delete operations
-- [ ] Graph visualization
 
 ## References
 

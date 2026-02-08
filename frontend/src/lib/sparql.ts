@@ -3,7 +3,7 @@ import api from './api'
 const PREFIXES = `
 PREFIX sh: <http://www.w3.org/ns/shacl#>
 PREFIX shui: <http://www.w3.org/ns/shacl-ui#>
-PREFIX ag: <http://archigraph.org/ontology#>
+PREFIX archimate: <https://purl.org/archimate#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -141,9 +141,9 @@ export async function getInstances(classUri: string): Promise<{ uri: string; lab
   const results = await sparqlSelect(`
     SELECT ?uri ?label WHERE {
       ?uri a <${classUri}> .
-      OPTIONAL { ?uri ag:hasName ?label }
+      OPTIONAL { ?uri archimate:Name ?archName }
       OPTIONAL { ?uri rdfs:label ?lbl }
-      BIND(COALESCE(?label, ?lbl, STR(?uri)) AS ?displayLabel)
+      BIND(COALESCE(?archName, ?lbl, STR(?uri)) AS ?displayLabel)
     }
     ORDER BY ?displayLabel
     LIMIT 100
@@ -151,7 +151,7 @@ export async function getInstances(classUri: string): Promise<{ uri: string; lab
 
   return results.map(r => ({
     uri: r.uri.value,
-    label: r.label?.value || r.uri.value.split('#').pop() || r.uri.value
+    label: r.archName?.value || r.lbl?.value || r.uri.value.split('#').pop() || r.uri.value
   }))
 }
 
@@ -186,9 +186,9 @@ export async function listEntities(classUri: string): Promise<{ uri: string; lab
   const results = await sparqlSelect(`
     SELECT ?uri ?label WHERE {
       ?uri a <${classUri}> .
-      OPTIONAL { ?uri ag:hasName ?name }
+      OPTIONAL { ?uri archimate:Name ?archName }
       OPTIONAL { ?uri rdfs:label ?lbl }
-      BIND(COALESCE(?name, ?lbl, STR(?uri)) AS ?label)
+      BIND(COALESCE(?archName, ?lbl, STR(?uri)) AS ?label)
     }
     ORDER BY ?label
   `)

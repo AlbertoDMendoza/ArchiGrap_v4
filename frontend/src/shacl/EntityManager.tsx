@@ -73,7 +73,7 @@ export function EntityManager() {
       <div className="entity-types">
         <h3>Entity Types</h3>
         {entityTypes.length === 0 ? (
-          <p className="no-types">No SHACL shapes found. Load shapes.ttl into GraphDB.</p>
+          <p className="no-types">No SHACL shapes found. Load SHACL shapes into GraphDB.</p>
         ) : (
           <ul>
             {entityTypes.map(type => (
