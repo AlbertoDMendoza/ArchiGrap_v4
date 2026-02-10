@@ -229,6 +229,7 @@ export interface ShapeProperty {
   description?: string
   datatype?: string
   class?: string
+  node?: string
   editor?: string
   viewer?: string
   minCount?: number
@@ -240,7 +241,7 @@ export interface ShapeProperty {
 
 export async function getShapeProperties(classUri: string): Promise<ShapeProperty[]> {
   const results = await sparqlSelect(`
-    SELECT ?path ?name ?description ?datatype ?class ?editor ?viewer ?minCount ?maxCount ?order ?propertyRole
+    SELECT ?path ?name ?description ?datatype ?class ?node ?editor ?viewer ?minCount ?maxCount ?order ?propertyRole
     WHERE {
       {
         ?shape a sh:NodeShape ;
@@ -257,6 +258,7 @@ export async function getShapeProperties(classUri: string): Promise<ShapePropert
       OPTIONAL { ?prop sh:description ?description }
       OPTIONAL { ?prop sh:datatype ?datatype }
       OPTIONAL { ?prop sh:class ?class }
+      OPTIONAL { ?prop sh:node ?node }
       OPTIONAL { ?prop shui:editor ?editor }
       OPTIONAL { ?prop shui:viewer ?viewer }
       OPTIONAL { ?prop sh:minCount ?minCount }
@@ -276,6 +278,7 @@ export async function getShapeProperties(classUri: string): Promise<ShapePropert
       description: r.description?.value,
       datatype: r.datatype?.value,
       class: r.class?.value,
+      node: r.node?.value,
       editor: r.editor?.value,
       viewer: r.viewer?.value,
       minCount: r.minCount ? parseInt(r.minCount.value) : undefined,
@@ -462,6 +465,19 @@ export async function updateEntity(
   if (insertTriples) {
     await sparqlUpdate(`INSERT DATA { ${insertTriples} }`)
   }
+}
+
+// Get all values of a property for an entity
+export async function getPropertyValues(
+  entityUri: string,
+  propertyPath: string
+): Promise<string[]> {
+  const results = await sparqlSelect(`
+    SELECT ?value WHERE {
+      <${entityUri}> <${propertyPath}> ?value .
+    }
+  `)
+  return results.map(r => r.value.value)
 }
 
 // Delete an entity

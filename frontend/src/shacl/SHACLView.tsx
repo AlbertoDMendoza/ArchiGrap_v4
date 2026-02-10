@@ -71,7 +71,7 @@ export function SHACLView({ classUri, classLabel, entityUri, values, onEdit, onB
             <div key={prop.path} className="shacl-view-field">
               <dt>{prop.name}</dt>
               <dd>
-                <Viewer property={prop} value={val} />
+                <Viewer property={prop} value={val} entityUri={entityUri} />
               </dd>
             </div>
           )

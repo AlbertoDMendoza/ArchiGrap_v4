@@ -95,6 +95,68 @@
   object-fit: contain;
 }
 
+/* Blank Node Viewer */
+.viewer-blanknode {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+/* Details Viewer - nested entity card */
+.viewer-details {
+  border: 1px solid #333;
+  border-left: 3px solid #646cff;
+  border-radius: 4px;
+  background: #222;
+  padding: 0.75rem 1rem;
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.viewer-details .viewer-details {
+  background: #282828;
+}
+
+.viewer-details-loading {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+/* ValueTable Viewer */
+.viewer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.viewer-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid #444;
+  background: #222;
+}
+
+.viewer-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #333;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.viewer-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.viewer-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 /* Actions */
 .shacl-view-actions {
   margin-top: 1.5rem;

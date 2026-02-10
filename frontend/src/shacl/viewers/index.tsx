@@ -1,8 +1,11 @@
-import type { ShapeProperty } from '../../lib/sparql'
+import { useState, useEffect } from 'react'
+import { getShapeProperties, getEntityValues, getPropertyValues, type ShapeProperty } from '../../lib/sparql'
 
 export interface ViewerProps {
   property: ShapeProperty
   value: string
+  entityUri?: string
+  depth?: number
 }
 
 // Literal Viewer - plain text fallback
@@ -63,6 +66,160 @@ export function HyperlinkViewer({ value }: ViewerProps) {
   )
 }
 
+// Blank Node Viewer - human-readable label for blank nodes
+export function BlankNodeViewer({ value }: ViewerProps) {
+  // Strip internal blank node prefixes to show a readable identifier
+  const label = value.replace(/^_:/, '').replace(/^genid-/, '').replace(/^node/, '')
+  return <span className="viewer-blanknode">{label || value}</span>
+}
+
+// Details Viewer - nested entity display for sh:class properties
+const MAX_DETAILS_DEPTH = 3
+
+export function DetailsViewer({ property, value, depth = 0 }: ViewerProps) {
+  const [properties, setProperties] = useState<ShapeProperty[]>([])
+  const [values, setValues] = useState<Record<string, { value: string; isUri: boolean; datatype?: string }>>({})
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    if (!property.class || depth >= MAX_DETAILS_DEPTH) {
+      setFailed(true)
+      setLoading(false)
+      return
+    }
+
+    Promise.all([
+      getShapeProperties(property.class),
+      getEntityValues(value, property.class)
+    ])
+      .then(([props, vals]) => {
+        if (props.length === 0 || Object.keys(vals).length === 0) {
+          setFailed(true)
+        } else {
+          setProperties(props)
+          setValues(vals)
+        }
+      })
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false))
+  }, [value, property.class, depth])
+
+  // Fallback to label display
+  if (failed || depth >= MAX_DETAILS_DEPTH) {
+    return <LabelViewer property={property} value={value} />
+  }
+
+  if (loading) {
+    return <span className="viewer-details-loading">Loading...</span>
+  }
+
+  return (
+    <div className="viewer-details">
+      {properties.map(prop => {
+        const val = values[prop.path]?.value || ''
+        if (!val) return null
+
+        const Viewer = getViewer(prop)
+
+        return (
+          <div key={prop.path} className="shacl-view-field">
+            <dt>{prop.name}</dt>
+            <dd>
+              <Viewer property={prop} value={val} entityUri={value} depth={depth + 1} />
+            </dd>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ValueTable Viewer - multi-value table for sh:class/sh:node properties
+export function ValueTableViewer({ property, value, entityUri, depth = 0 }: ViewerProps) {
+  const [columns, setColumns] = useState<ShapeProperty[]>([])
+  const [rows, setRows] = useState<{ uri: string; values: Record<string, { value: string; isUri: boolean; datatype?: string }> }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  const shapeUri = property.node || property.class
+
+  useEffect(() => {
+    if (!entityUri || !shapeUri) {
+      setFailed(true)
+      setLoading(false)
+      return
+    }
+
+    getPropertyValues(entityUri, property.path)
+      .then(valueUris => {
+        if (valueUris.length === 0) {
+          setFailed(true)
+          setLoading(false)
+          return
+        }
+
+        return getShapeProperties(shapeUri).then(props => {
+          if (props.length === 0) {
+            setFailed(true)
+            setLoading(false)
+            return
+          }
+
+          setColumns(props)
+
+          return Promise.all(
+            valueUris.map(uri =>
+              getEntityValues(uri, shapeUri).then(vals => ({ uri, values: vals }))
+            )
+          ).then(setRows)
+        })
+      })
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false))
+  }, [entityUri, shapeUri, property.path])
+
+  if (failed || !entityUri || !shapeUri) {
+    return <LabelViewer property={property} value={value} />
+  }
+
+  if (loading) {
+    return <span className="viewer-details-loading">Loading...</span>
+  }
+
+  if (rows.length === 0) {
+    return <LabelViewer property={property} value={value} />
+  }
+
+  return (
+    <table className="viewer-table">
+      <thead>
+        <tr>
+          {columns.map(col => (
+            <th key={col.path}>{col.name}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(row => (
+          <tr key={row.uri}>
+            {columns.map(col => {
+              const cellVal = row.values[col.path]?.value || ''
+              if (!cellVal) return <td key={col.path} />
+              const CellViewer = getViewer(col)
+              return (
+                <td key={col.path}>
+                  <CellViewer property={col} value={cellVal} entityUri={row.uri} depth={depth + 1} />
+                </td>
+              )
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 // Viewer Factory
 const SHUI = 'http://www.w3.org/ns/shacl-ui#'
 
@@ -74,6 +231,9 @@ const VIEWER_MAP: Record<string, React.ComponentType<ViewerProps>> = {
   [`${SHUI}HTMLViewer`]: HTMLViewer,
   [`${SHUI}ImageViewer`]: ImageViewer,
   [`${SHUI}HyperlinkViewer`]: HyperlinkViewer,
+  [`${SHUI}DetailsViewer`]: DetailsViewer,
+  [`${SHUI}BlankNodeViewer`]: BlankNodeViewer,
+  [`${SHUI}ValueTableViewer`]: ValueTableViewer,
 }
 
 export function getViewer(property: ShapeProperty): React.ComponentType<ViewerProps> {
