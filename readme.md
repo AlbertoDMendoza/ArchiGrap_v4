@@ -158,7 +158,9 @@ archigraph-v4/
 │       │   └── archimate.ttl  # Full ArchiMate 3.2 ontology
 │       └── validation/
 │           ├── archimate_core_validation.ttl
-│           └── archimate_derivation.ttl
+│           ├── archimate-business-analyst-validation.ttl
+│           ├── archimate_derivation.ttl
+│           └── archimate_profiles.ttl
 └── start.sh / stop.sh
 ```
 
@@ -208,22 +210,25 @@ INSERT DATA {
 
 ## Current Status
 
-- Shape discovery via SPARQL (`sh:NodeShape` + `sh:targetClass`)
+- Shape discovery via SPARQL (`sh:NodeShape` + `sh:targetClass` + implicit target)
 - Form generation from `sh:property` constraints
-- 7 editor components mapped to `shui:` URIs
-- Entity create, edit, and delete via SPARQL
+- 11 editor components mapped to `shui:` URIs
+- 10 viewer components mapped to `shui:` URIs (all W3C spec viewers)
+- Entity create, edit, delete, and read-only view via SPARQL
+- Collapsible entity type tree with hierarchy breadcrumbs
+- Specialization profiles as native OWL classes with SHACL shapes
 - Dark theme UI
 
 ## Next Steps
 
 1. ~~Edit existing entities (SELECT current values → form → DELETE/INSERT)~~ ✓
-2. View mode — implement viewers (`LiteralViewer`, `LabelViewer`, `URIViewer`, `LangStringViewer`, `HTMLViewer`, `ImageViewer`, `DetailsViewer`)
+2. ~~View mode — implement viewers (LiteralViewer, LabelViewer, URIViewer, LangStringViewer, HTMLViewer, ImageViewer, HyperlinkViewer, BlankNodeViewer, DetailsViewer, ValueTableViewer)~~ ✓
 3. Widget scoring — numeric scoring per spec instead of if/else
 4. Label resolution — `shui:propertyRole shui:LabelRole` + `sh:order`
 5. Multi-value properties — `sh:maxCount > 1` with add/remove UI
-6. DetailsEditor/DetailsViewer — nested forms for blank nodes
-7. Language-tagged strings — `TextFieldWithLangEditor`, `TextAreaWithLangEditor`, `LangStringViewer`
-8. ValueTableViewer — tabular display of multiple values
+6. DetailsEditor — nested forms for blank nodes
+7. Language-tagged strings — `TextFieldWithLangEditor`, `TextAreaWithLangEditor`
+8. Specialization profile management — create/edit profiles (owl:Class + sh:NodeShape) with custom typed attributes, define new specialization hierarchies from within the app
 
 ## Development
 
