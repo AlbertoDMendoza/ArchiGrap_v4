@@ -342,7 +342,7 @@ export async function getInstances(classUri: string): Promise<{ uri: string; lab
 // Create a new entity
 export async function createEntity(
   classUri: string,
-  properties: Record<string, { value: string; isUri?: boolean; datatype?: string }>
+  properties: Record<string, { value: string | string[]; isUri?: boolean; datatype?: string }>
 ): Promise<string> {
   const id = `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   const entityUri = `http://archigraph.org/data#${id}`
@@ -350,14 +350,16 @@ export async function createEntity(
   let triples = `<${entityUri}> a <${classUri}> .`
 
   for (const [path, prop] of Object.entries(properties)) {
-    if (!prop.value) continue
-
-    if (prop.isUri) {
-      triples += `\n<${entityUri}> <${path}> <${prop.value}> .`
-    } else if (prop.datatype) {
-      triples += `\n<${entityUri}> <${path}> "${prop.value}"^^<${prop.datatype}> .`
-    } else {
-      triples += `\n<${entityUri}> <${path}> "${prop.value}" .`
+    const vals = Array.isArray(prop.value) ? prop.value : [prop.value]
+    for (const v of vals) {
+      if (!v) continue
+      if (prop.isUri) {
+        triples += `\n<${entityUri}> <${path}> <${v}> .`
+      } else if (prop.datatype) {
+        triples += `\n<${entityUri}> <${path}> "${v}"^^<${prop.datatype}> .`
+      } else {
+        triples += `\n<${entityUri}> <${path}> "${v}" .`
+      }
     }
   }
 
@@ -387,7 +389,7 @@ export async function listEntities(classUri: string): Promise<{ uri: string; lab
 export async function getEntityValues(
   entityUri: string,
   classUri: string
-): Promise<Record<string, { value: string; isUri: boolean; datatype?: string }>> {
+): Promise<Record<string, { value: string | string[]; isUri: boolean; datatype?: string }>> {
   const results = await sparqlSelect(`
     SELECT ?path ?value ?isUri ?datatype WHERE {
       {
@@ -406,12 +408,23 @@ export async function getEntityValues(
     }
   `)
 
-  const values: Record<string, { value: string; isUri: boolean; datatype?: string }> = {}
+  const values: Record<string, { value: string | string[]; isUri: boolean; datatype?: string }> = {}
   for (const r of results) {
-    values[r.path.value] = {
-      value: r.value.value,
-      isUri: r.isUri.value === 'true',
-      datatype: r.datatype?.value
+    const path = r.path.value
+    if (values[path]) {
+      // Multiple values for same path — collect into array
+      const existing = values[path].value
+      if (Array.isArray(existing)) {
+        existing.push(r.value.value)
+      } else {
+        values[path].value = [existing, r.value.value]
+      }
+    } else {
+      values[path] = {
+        value: r.value.value,
+        isUri: r.isUri.value === 'true',
+        datatype: r.datatype?.value
+      }
     }
   }
   return values
@@ -421,7 +434,7 @@ export async function getEntityValues(
 export async function updateEntity(
   entityUri: string,
   classUri: string,
-  properties: Record<string, { value: string; isUri?: boolean; datatype?: string }>
+  properties: Record<string, { value: string | string[]; isUri?: boolean; datatype?: string }>
 ): Promise<void> {
   // Get all paths from the shape to know what to delete
   const shapeResults = await sparqlSelect(`
@@ -452,13 +465,16 @@ export async function updateEntity(
   // Build INSERT for new values
   let insertTriples = ''
   for (const [path, prop] of Object.entries(properties)) {
-    if (!prop.value) continue
-    if (prop.isUri) {
-      insertTriples += `<${entityUri}> <${path}> <${prop.value}> .\n`
-    } else if (prop.datatype) {
-      insertTriples += `<${entityUri}> <${path}> "${prop.value}"^^<${prop.datatype}> .\n`
-    } else {
-      insertTriples += `<${entityUri}> <${path}> "${prop.value}" .\n`
+    const vals = Array.isArray(prop.value) ? prop.value : [prop.value]
+    for (const v of vals) {
+      if (!v) continue
+      if (prop.isUri) {
+        insertTriples += `<${entityUri}> <${path}> <${v}> .\n`
+      } else if (prop.datatype) {
+        insertTriples += `<${entityUri}> <${path}> "${v}"^^<${prop.datatype}> .\n`
+      } else {
+        insertTriples += `<${entityUri}> <${path}> "${v}" .\n`
+      }
     }
   }
 

@@ -78,7 +78,7 @@ const MAX_DETAILS_DEPTH = 3
 
 export function DetailsViewer({ property, value, depth = 0 }: ViewerProps) {
   const [properties, setProperties] = useState<ShapeProperty[]>([])
-  const [values, setValues] = useState<Record<string, { value: string; isUri: boolean; datatype?: string }>>({})
+  const [values, setValues] = useState<Record<string, { value: string | string[]; isUri: boolean; datatype?: string }>>({})
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
 
@@ -117,16 +117,19 @@ export function DetailsViewer({ property, value, depth = 0 }: ViewerProps) {
   return (
     <div className="viewer-details">
       {properties.map(prop => {
-        const val = values[prop.path]?.value || ''
-        if (!val) return null
+        const raw = values[prop.path]?.value
+        if (!raw || (Array.isArray(raw) && raw.length === 0)) return null
 
         const Viewer = getViewer(prop)
+        const vals = Array.isArray(raw) ? raw : [raw]
 
         return (
           <div key={prop.path} className="shacl-view-field">
             <dt>{prop.name}</dt>
             <dd>
-              <Viewer property={prop} value={val} entityUri={value} depth={depth + 1} />
+              {vals.map((v, i) => (
+                <Viewer key={i} property={prop} value={v} entityUri={value} depth={depth + 1} />
+              ))}
             </dd>
           </div>
         )
@@ -138,7 +141,7 @@ export function DetailsViewer({ property, value, depth = 0 }: ViewerProps) {
 // ValueTable Viewer - multi-value table for sh:class/sh:node properties
 export function ValueTableViewer({ property, value, entityUri, depth = 0 }: ViewerProps) {
   const [columns, setColumns] = useState<ShapeProperty[]>([])
-  const [rows, setRows] = useState<{ uri: string; values: Record<string, { value: string; isUri: boolean; datatype?: string }> }[]>([])
+  const [rows, setRows] = useState<{ uri: string; values: Record<string, { value: string | string[]; isUri: boolean; datatype?: string }> }[]>([])
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
 
@@ -204,8 +207,9 @@ export function ValueTableViewer({ property, value, entityUri, depth = 0 }: View
         {rows.map(row => (
           <tr key={row.uri}>
             {columns.map(col => {
-              const cellVal = row.values[col.path]?.value || ''
-              if (!cellVal) return <td key={col.path} />
+              const raw = row.values[col.path]?.value
+              if (!raw || (Array.isArray(raw) && raw.length === 0)) return <td key={col.path} />
+              const cellVal = Array.isArray(raw) ? raw[0] : raw
               const CellViewer = getViewer(col)
               return (
                 <td key={col.path}>

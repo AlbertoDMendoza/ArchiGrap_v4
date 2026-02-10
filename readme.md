@@ -51,7 +51,7 @@ Based on the W3C SHACL 1.2 UI spec: https://w3c.github.io/data-shapes/shacl12-ui
 | `shui:TextAreaEditor` | Multi-line text |
 | `shui:EnumSelectEditor` | Dropdown from `sh:in` values |
 | `shui:AutoCompleteEditor` | Type-ahead search for instances |
-| `shui:InstancesSelectEditor` | Multi-select instances |
+| `shui:InstancesSelectEditor` | Multi-select instances (add/remove chips) |
 | `shui:BooleanSelectEditor` | Yes/No dropdown |
 | `shui:DatePickerEditor` | Calendar widget |
 | `shui:DateTimePickerEditor` | Date + time picker |
@@ -146,9 +146,12 @@ archigraph-v4/
 │       ├── App.tsx
 │       ├── shacl/
 │       │   ├── EntityManager.tsx   # Entity list + CRUD
-│       │   ├── SHACLForm.tsx       # Generic form renderer
-│       │   └── editors/
-│       │       └── index.tsx       # shui: URI → React component map
+│       │   ├── SHACLForm.tsx       # Generic form renderer (single + multi-value)
+│       │   ├── SHACLView.tsx       # Read-only entity view
+│       │   ├── editors/
+│       │   │   └── index.tsx       # shui: URI → React editor component map
+│       │   └── viewers/
+│       │       └── index.tsx       # shui: URI → React viewer component map
 │       └── lib/
 │           ├── api.ts             # Axios client
 │           └── sparql.ts          # SPARQL query helpers
@@ -214,6 +217,7 @@ INSERT DATA {
 - Form generation from `sh:property` constraints
 - 11 editor components mapped to `shui:` URIs
 - 10 viewer components mapped to `shui:` URIs (all W3C spec viewers)
+- Multi-value property support — `InstancesSelectEditor` for `sh:class` properties without `sh:maxCount 1`
 - Entity create, edit, delete, and read-only view via SPARQL
 - Collapsible entity type tree with hierarchy breadcrumbs
 - Specialization profiles as native OWL classes with SHACL shapes
@@ -225,7 +229,7 @@ INSERT DATA {
 2. ~~View mode — implement viewers (LiteralViewer, LabelViewer, URIViewer, LangStringViewer, HTMLViewer, ImageViewer, HyperlinkViewer, BlankNodeViewer, DetailsViewer, ValueTableViewer)~~ ✓
 3. Widget scoring — numeric scoring per spec instead of if/else
 4. Label resolution — `shui:propertyRole shui:LabelRole` + `sh:order`
-5. Multi-value properties — `sh:maxCount > 1` with add/remove UI
+5. ~~Multi-value properties — `sh:maxCount > 1` with add/remove UI~~ ✓
 6. DetailsEditor — nested forms for blank nodes
 7. Language-tagged strings — `TextFieldWithLangEditor`, `TextAreaWithLangEditor`
 8. Specialization profile management — create/edit profiles (owl:Class + sh:NodeShape) with custom typed attributes, define new specialization hierarchies from within the app

@@ -62,16 +62,20 @@ export function SHACLView({ classUri, classLabel, entityUri, values, onEdit, onB
 
       <div className="shacl-view-fields">
         {properties.map(prop => {
-          const val = values[prop.path]?.value || ''
-          if (!val) return null
+          const raw = values[prop.path]?.value
+          if (!raw || (Array.isArray(raw) && raw.length === 0)) return null
 
           const Viewer = getViewer(prop)
+          const vals = Array.isArray(raw) ? raw : [raw]
+          if (vals.length === 0 || (vals.length === 1 && !vals[0])) return null
 
           return (
             <div key={prop.path} className="shacl-view-field">
               <dt>{prop.name}</dt>
               <dd>
-                <Viewer property={prop} value={val} entityUri={entityUri} />
+                {vals.map((v, i) => (
+                  <Viewer key={i} property={prop} value={v} entityUri={entityUri} />
+                ))}
               </dd>
             </div>
           )

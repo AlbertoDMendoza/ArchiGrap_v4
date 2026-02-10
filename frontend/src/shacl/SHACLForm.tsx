@@ -14,7 +14,7 @@ interface SHACLFormProps {
 
 export interface FormValues {
   [path: string]: {
-    value: string
+    value: string | string[]
     isUri?: boolean
     datatype?: string
   }
@@ -42,8 +42,9 @@ export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSu
         // Initialize form values from initialValues or empty
         const initial: FormValues = {}
         for (const prop of props) {
+          const isMulti = !!prop.class && (prop.maxCount === undefined || prop.maxCount > 1)
           initial[prop.path] = initialValues?.[prop.path] ?? {
-            value: '',
+            value: isMulti ? [] : '',
             isUri: !!prop.class,
             datatype: prop.datatype
           }
@@ -54,7 +55,7 @@ export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSu
       .finally(() => setLoading(false))
   }, [classUri, initialValues])
 
-  const handleChange = (path: string, value: string, isUri?: boolean) => {
+  const handleChange = (path: string, value: string | string[], isUri?: boolean) => {
     setValues(prev => ({
       ...prev,
       [path]: {
@@ -124,7 +125,7 @@ export function SHACLForm({ classUri, classLabel, entityUri, initialValues, onSu
             )}
             <Editor
               property={prop}
-              value={values[prop.path]?.value || ''}
+              value={values[prop.path]?.value ?? ''}
               onChange={(val, isUri) => handleChange(prop.path, val, isUri)}
             />
           </div>
